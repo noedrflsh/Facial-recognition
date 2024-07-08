@@ -44,7 +44,6 @@ class FormWindow(QMainWindow):
         super()._init_()
         self.setWindowTitle('Student Form')
         self.setGeometry(100, 100, 400, 400)
-
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
         self.layout = QVBoxLayout(self.central_widget)
@@ -83,9 +82,7 @@ class FormWindow(QMainWindow):
         self.submit_button = QPushButton('Submit', self)
         self.submit_button.clicked.connect(self.submit_form)
         self.form_layout.addRow(self.submit_button)
-
         self.layout.addLayout(self.form_layout)
-
         self.selected_file = None
 
     def open_file_dialog(self):
@@ -105,6 +102,7 @@ class FormWindow(QMainWindow):
 
         if not student_name or not usn or not sem or not branch or not file_path:
             QMessageBox.warning(self, 'Incomplete Form', 'Please fill all fields and select a file.')
+        
         else:
             image=cv2.imread(self.selected_file)
             path=f'D:\MINI_PROJECT\images\{student_name}.jpg'
@@ -118,7 +116,7 @@ class FormWindow(QMainWindow):
                 c.execute('''
                     INSERT INTO students (name, usn, sem, branch, image)
                     VALUES (?, ?, ?, ?, ?)
-                ''', (student_name, usn, sem, branch, image_data))
+                    ''', (student_name, usn, sem, branch, image_data))
                 conn.commit()
                 QMessageBox.information(self, 'Form Submitted', 'Student details have been submitted successfully.')
                 self.student_name_input.clear()
@@ -139,11 +137,9 @@ class admin_login(QMainWindow):
         super()._init_()
         self.setWindowTitle('admin Window')
         self.setGeometry(100, 100, 800, 600)
-
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
         self.layout = QVBoxLayout(self.central_widget)
-
         self.form_layout = QFormLayout()
 
         # USER Name input
@@ -160,7 +156,6 @@ class admin_login(QMainWindow):
         self.submit_button = QPushButton('Submit', self)
         self.submit_button.clicked.connect(self.check_form)
         self.form_layout.addRow(self.submit_button)
-
         self.layout.addLayout(self.form_layout)
 
     def check_form(self):
@@ -176,7 +171,7 @@ class admin_login(QMainWindow):
         elif(username=='' or password==''):
             QMessageBox.warning(self, 'Incomplete Form', 'Please fill all fields.')
         else:
-             QMessageBox.information(self, 'Form not submitted', 'check the details of admin username and  password TRY AGAIN ')
+             QMessageBox.information(self, 'Form not submitted', 'check the details of admin username and password')
 
 ## ADMIN HOME PAGE
 class admin_home(QWidget):
@@ -186,21 +181,16 @@ class admin_home(QWidget):
         
     def initUI(self):
         self.layout = QVBoxLayout()
-        
         self.list_button = QPushButton('Attendence List', self)
         self.layout.addWidget(self.list_button)
         self.list_button.clicked.connect(self.open_list)
-        
         self.logout_button = QPushButton('Logout', self)
         self.layout.addWidget(self.logout_button)
         self.logout_button.clicked.connect(self.open_logout)
-        
         self.form_button = QPushButton('Fill the Form', self)
         self.form_button.clicked.connect(self.open_form)
         self.layout.addWidget(self.form_button)
-        
         self.setLayout(self.layout)
-        
         self.setWindowTitle('New Window')
         self.setGeometry(100, 100, 800, 600)
     
@@ -221,7 +211,6 @@ class MainWindow(QMainWindow):
         super()._init_()
         self.setWindowTitle('Main Window')
         self.setGeometry(100, 100, 800, 600)
-
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
         self.layout = QVBoxLayout(self.central_widget)
@@ -254,11 +243,10 @@ class MainWindow(QMainWindow):
 class student(QMainWindow):
     def _init_(self):
         super()._init_()
-
         self.setWindowTitle('STUDENT PAGE')
         self.setGeometry(100, 100, 1280, 720)
 
-         # Create the stacked widget
+        # Create the stacked widget
         self.stacked_widget = QStackedWidget()
         self.setCentralWidget(self.stacked_widget)
 
@@ -270,14 +258,15 @@ class student(QMainWindow):
         self.video_capture=VideoCapture()
         self.encodedListImages=self.video_capture.get_encoded_list()
         self.classNames=self.video_capture.get_classNames()
+        
         # USER Name input
         self.student_username_label = QLabel('User USN:')
         self.student_username_input = QLineEdit(self)
         self.form_layout.addRow(self.student_username_label, self.student_username_input)
+        
         # Add a QLabel to display the video
         self.video_label = QLabel(self)
         self.form_layout.addRow(self.video_label)
-
         self.start_button = QPushButton('Start', self)
         self.start_button.clicked.connect(self.start_video)
         self.form_layout.addRow(self.start_button)
@@ -297,6 +286,7 @@ class student(QMainWindow):
         self.table_widget.setColumnCount(5)  # Adjust column count based on your data
         self.table_widget.setHorizontalHeaderLabels(['ID','Name','Date','Month','Time'])  # Column headers
         self.second_layout.addWidget(self.table_widget)
+        
         # Add both layouts to the stacked widget
         self.stacked_widget.addWidget(self.first_widget)
         self.stacked_widget.addWidget(self.second_widget)
@@ -318,7 +308,6 @@ class student(QMainWindow):
         success, img = self.cap.read()
         if not success:
             return
-
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         facesCurFrame = face_recognition.face_locations(img)
         encodedCurFrame = face_recognition.face_encodings(img, facesCurFrame)
@@ -353,10 +342,8 @@ class student(QMainWindow):
             c=conn.cursor()
             c.execute("SELECT * FROM attendance WHERE name=?", (self.name,))
             rows=c.fetchall()
-           
             self.table_widget.setColumnCount(len(rows[0]))
             self.table_widget.setRowCount(len(rows))
-            
             for r,r_data in enumerate(rows):
                 for c,c_data in enumerate(r_data):
                     self.table_widget.setItem(r,c,QTableWidgetItem(str(c_data)))
@@ -370,9 +357,9 @@ class student(QMainWindow):
 class VideoCapture(QMainWindow):
     def _init_(self):
         super()._init_()
-
         self.setWindowTitle('Face Recognition')
-        self.setGeometry(100, 100, 1280, 720)
+        self.setGeometry(100, 100, 1280,)
+        
         # Load images and create encodings
         self.path = r"D:\MINI_PROJECT\images"
         self.images = []
@@ -401,7 +388,6 @@ class VideoCapture(QMainWindow):
         # Timer to update the video
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_frame)
-
         self.cap = None
         
     def load_images(self):
@@ -443,7 +429,6 @@ class VideoCapture(QMainWindow):
         success, img = self.cap.read()
         if not success:
             return
-
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         facesCurFrame = face_recognition.face_locations(img)
         encodedCurFrame = face_recognition.face_encodings(img, facesCurFrame)
@@ -563,7 +548,7 @@ class Table_list(QMainWindow):
         finally:
             conn.close()
         
-if _name_ == '_main_':
+if __name__ == '_main_':
     init_db()
     app = QApplication(sys.argv)
     window = MainWindow()
