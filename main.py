@@ -15,21 +15,21 @@ from PyQt5.QtWidgets import QApplication, QLabel, QMainWindow, QPushButton, QVBo
 
 def init_db():
     try:
-        conn = sqlite3.connect('student_details.db')
+        conn = sqlite3.connect('employee_details.db')
         c = conn.cursor()
         c.execute('''
-            CREATE TABLE IF NOT EXISTS students(
+            CREATE TABLE IF NOT EXISTS employees(
                 id INTEGER PRIMARY KEY,
                 name TEXT NOT NULL,
-                usn TEXT NOT NULL,
-                sem TEXT NOT NULL,
-                branch TEXT NOT NULL,
+                emp_id TEXT NOT NULL,
+                designation TEXT NOT NULL,
+                gender TEXT NOT NULL,
                 image BLOB NOT NULL
             )
         ''')
         c.execute('''
             CREATE TABLE IF NOT EXISTS attendance (
-                usn TEXT PRIMARY KEY,
+                emp_id TEXT PRIMARY KEY,
                 name TEXT NOT NULL,
                 date TEXT NOT NULL,
                 month Text NOT NULL,
@@ -76,18 +76,18 @@ class StyleContainer:
             }
         """
         
-## ADMIN FILL THE FORM WITH STUDENT DETAILS LIKE USN,NAME,SEM,BRANCH AND PHOTO
+## ADMIN FILL THE FORM WITH EMPLOYEE DETAILS LIKE ID, NAME, DESIGNATION, GENDER AND PHOTO
 class FormWindow(QMainWindow, StyleContainer):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle('Student Form')
+        self.setWindowTitle('Employee Form')
         self.setGeometry(100, 100, 800, 800)
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
         self.layout = QVBoxLayout(self.central_widget)
         self.central_widget.setStyleSheet("QWidget { " + self.window_style() + " }")
         
-        self.heading_label = QLabel('Student Details')
+        self.heading_label = QLabel('Employee Details')
         self.heading_label.setAlignment(Qt.AlignCenter)
         self.heading_label.setStyleSheet("font-size: 20px; font-weight: bold; margin-top: 20px; margin-bottom: 20px;")
         self.layout.addWidget(self.heading_label)
@@ -95,26 +95,27 @@ class FormWindow(QMainWindow, StyleContainer):
         # Create the form layout
         self.form_layout = QFormLayout()
 
-        # Student Name input
-        self.student_name_label = QLabel('Student Name:')
-        self.student_name_input = QLineEdit(self)
-        self.form_layout.addRow(self.student_name_label,self.student_name_input)
+        # Employee Name input
+        self.employee_name_label = QLabel('Employee Name:')
+        self.employee_name_input = QLineEdit(self)
+        self.form_layout.addRow(self.employee_name_label,self.employee_name_input)
 
         # USN input
-        self.usn_label = QLabel('USN:')
-        self.usn_input = QLineEdit(self)
-        self.form_layout.addRow(self.usn_label, self.usn_input)
+        self.emp_id_label = QLabel('Employee ID:')
+        self.emp_id_input = QLineEdit(self)
+        self.form_layout.addRow(self.emp_id_label, self.emp_id_input)
 
-        # Semester input
-        self.sem_label = QLabel('Semester:')
-        self.sem_input = QComboBox(self)
-        self.sem_input.addItems(['1', '2', '3', '4', '5', '6', '7', '8'])
-        self.form_layout.addRow(self.sem_label, self.sem_input)
+        # Designation input
+        self.designation_label = QLabel('Designation:')
+        self.designation_input = QComboBox(self)
+        self.designation_input.addItems(['Assistant Professor', 'Associate Professor','Professor'])
+        self.form_layout.addRow(self.designation_label, self.designation_input)
 
-        # Branch input
-        self.branch_label = QLabel('Branch:')
-        self.branch_input = QLineEdit(self)
-        self.form_layout.addRow(self.branch_label, self.branch_input)
+        # Gender input
+        self.gender_label = QLabel('Gender:')
+        self.gender_input = QComboBox(self)
+        self.gender_input.addItems(['Male', 'Female','Other'])
+        self.form_layout.addRow(self.gender_label, self.gender_input)
 
         # File input for image
         self.file_button = QPushButton('Add Image', self)
@@ -140,33 +141,33 @@ class FormWindow(QMainWindow, StyleContainer):
             self.file_label.setText(os.path.basename(file_name))
 
     def submit_form(self):
-        student_name = self.student_name_input.text()
-        usn = self.usn_input.text()
-        sem = self.sem_input.currentText()
-        branch = self.branch_input.text()
+        employee_name = self.employee_name_input.text()
+        emp_id = self.emp_id_input.text()
+        designation = self.designation_input.currentText()
+        gender = self.gender_input.text()
         file_path = self.selected_file
 
-        if not student_name or not usn or not sem or not branch or not file_path:
+        if not employee_name or not emp_id or not designation or not gender or not file_path:
             QMessageBox.warning(self, 'Incomplete Form', 'Please fill all fields and select a file.')
         else:
             image=cv2.imread(self.selected_file)
-            path=rf'C:\Stuff\Documents\College\Mini projects\Facial recognition\images\{student_name}_{usn}.jpg'
+            path=rf'C:\Stuff\Documents\College\Mini projects\Facial recognition\images\{employee_name}_{emp_id}.jpg'
             cv2.imwrite(path,image)
             try:
                 with open(file_path, 'rb') as file:
                     image_data = file.read()
 
-                conn = sqlite3.connect('student_details.db')
+                conn = sqlite3.connect('employee_details.db')
                 c = conn.cursor()
                 c.execute('''
-                    INSERT INTO students (name, usn, sem, branch, image)
+                    INSERT INTO employees (name, emp_id, designation, gender, image)
                     VALUES (?, ?, ?, ?, ?)
-                ''', (student_name, usn, sem, branch, image_data))
+                ''', (employee_name, emp_id, designation, gender, image_data))
                 conn.commit()
-                QMessageBox.information(self, 'Form Submitted', 'Student details have been submitted successfully.')
-                self.student_name_input.clear()
-                self.usn_input.clear()
-                self.branch_input.clear()
+                QMessageBox.information(self, 'Form Submitted', 'Employee details have been submitted successfully.')
+                self.employee_name_input.clear()
+                self.emp_id_input.clear()
+                self.gender_input.clear()
                 self.file_label.setText('No file selected')
                 self.selected_file = None
                 self.close()
@@ -300,9 +301,9 @@ class MainWindow(QMainWindow, StyleContainer):
         self.layout.addWidget(self.heading_label)
 
         # Add buttons
-        self.student_login_button = QPushButton('Student Login', self)
-        self.student_login_button.setStyleSheet(self.button_style())
-        self.student_login_button.clicked.connect(self.open_student)
+        self.employee_login_button = QPushButton('Employee Login', self)
+        self.employee_login_button.setStyleSheet(self.button_style())
+        self.employee_login_button.clicked.connect(self.open_employee)
         
         self.admin_login_button = QPushButton('Admin Login', self)
         self.admin_login_button.setStyleSheet(self.button_style())
@@ -316,13 +317,13 @@ class MainWindow(QMainWindow, StyleContainer):
         self.logout_camera_button.setStyleSheet(self.button_style())
         self.logout_camera_button.clicked.connect(self.open_logout_camera)
 
-        self.layout.addWidget(self.student_login_button)
+        self.layout.addWidget(self.employee_login_button)
         self.layout.addWidget(self.admin_login_button)
         self.layout.addWidget(self.login_camera_button)
         self.layout.addWidget(self.logout_camera_button)
         
         hbox1 = QHBoxLayout()
-        hbox1.addWidget(self.student_login_button)
+        hbox1.addWidget(self.employee_login_button)
         hbox1.addWidget(self.admin_login_button)
 
         hbox2 = QHBoxLayout()
@@ -343,24 +344,24 @@ class MainWindow(QMainWindow, StyleContainer):
         self.logout_video_window = VideoCapture("logout")
         self.logout_video_window.show()
 
-    def open_student(self):
-        self.student_window = student()
-        self.student_window.show()
+    def open_employee(self):
+        self.employee_window = employee()
+        self.employee_window.show()
         
     def open_admin(self):
         self.admin_window=admin_login()
         self.admin_window.show()
        
 
-# STUDENT HOME PAGE ,LOGIN WITH FACE RECOGNITION AND OPEN THE ATTENDENCE LIST
-class student(QMainWindow, StyleContainer):
+# EMPLOYEE HOME PAGE ,LOGIN WITH FACE RECOGNITION AND OPEN THE ATTENDENCE LIST
+class employee(QMainWindow, StyleContainer):
     def __init__(self):
         super().__init__()
 
         self.name = ""
-        self.usn = ""
-        self.setWindowTitle('Student Window')
-        self.setGeometry(100, 100, 1280, 720)
+        self.emp_id = ""
+        self.setWindowTitle('Employee Window')
+        self.setGeometry(100, 100, 1500, 900)
 
         # Create the stacked widget
         self.stacked_widget = QStackedWidget()
@@ -373,7 +374,7 @@ class student(QMainWindow, StyleContainer):
         self.first_widget.setLayout(self.first_layout)
 
         # Heading for first widget
-        self.heading_label = QLabel('Student Login')
+        self.heading_label = QLabel('Employee Login')
         self.heading_label.setAlignment(Qt.AlignCenter)
         self.heading_label.setStyleSheet("font-size: 20px; font-weight: bold; margin-top: 20px; margin-bottom: 20px;")
         self.first_layout.addWidget(self.heading_label)
@@ -381,11 +382,11 @@ class student(QMainWindow, StyleContainer):
         # Form layout for inputs
         self.form_layout = QFormLayout()
 
-        # USN input field
-        self.student_usn_label = QLabel('User USN:')
-        self.student_usn_input = QLineEdit(self)
-        self.student_usn_input.setStyleSheet("font-size: 14px; width: 50px;")  # Adjust width here
-        self.form_layout.addRow(self.student_usn_label, self.student_usn_input)
+        # Employee ID input field
+        self.employee_emp_id_label = QLabel('User Employee ID:')
+        self.employee_emp_id_input = QLineEdit(self)
+        self.employee_emp_id_input.setStyleSheet("font-size: 18px; width: 20px;")  # Adjust width here
+        self.form_layout.addRow(self.employee_emp_id_label, self.employee_emp_id_input)
 
         # Video display (assuming video_label needs to be updated with video frames)
         self.video_label = QLabel(self)
@@ -412,9 +413,10 @@ class student(QMainWindow, StyleContainer):
         button_layout = QHBoxLayout()
         button_layout.addWidget(self.start_button)
         button_layout.addWidget(self.submit_button)
-        button_layout.addStretch()  # Optional: add stretch to push buttons to the sides
+        button_layout.addStretch(0)  # Optional: add stretch to push buttons to the sides
 
-        self.form_layout.addRow('', self.submit_button)  # Empty label for alignment
+        # Add the horizontal layout to the form layout
+        self.form_layout.addRow(button_layout)
 
         # Add form layout to first widget layout
         self.first_layout.addLayout(self.form_layout)
@@ -431,7 +433,7 @@ class student(QMainWindow, StyleContainer):
         self.second_widget.setStyleSheet("QWidget { " + self.window_style() + " }")
         self.table_widget = QTableWidget()
         self.table_widget.setColumnCount(6)  # Adjust column count based on your data
-        self.table_widget.setHorizontalHeaderLabels(['USN', 'Name', 'Date', 'Month', 'LoginTime', 'LogoutTime'])  # Column headers
+        self.table_widget.setHorizontalHeaderLabels(['Employee ID', 'Name', 'Date', 'Month', 'LoginTime', 'LogoutTime'])  # Column headers
         self.second_layout.addWidget(self.table_widget)
 
         # Add both widgets to the stacked widget
@@ -440,19 +442,19 @@ class student(QMainWindow, StyleContainer):
 
 
     def start_video(self):
-        usn=self.student_usn_input.text()
-        exist_usn=[]
+        emp_id=self.employee_emp_id_input.text()
+        exist_emp_id=[]
         for s in self.classNames:
-            exist_usn.append(s.split('_')[1])
+            exist_emp_id.append(s.split('_')[1])
        
-        print(exist_usn)
-        if usn in exist_usn:
+        print(exist_emp_id)
+        if emp_id in exist_emp_id:
             self.cap = cv2.VideoCapture(0)
             self.cap.set(3, 1280)
             self.cap.set(4, 720)
             self.timer.start(20)
         else:
-            QMessageBox.warning(self, 'INCORRECT', 'Please Check the USN correctly')
+            QMessageBox.warning(self, 'INCORRECT', 'Please Check the if Employee ID is correct')
     
     def stop_video(self):
         self.timer.stop()
@@ -474,9 +476,9 @@ class student(QMainWindow, StyleContainer):
             matchIndex = np.argmin(faceDis)
             if matches[matchIndex]:
                 name = self.classNames[matchIndex].upper()
-                name,usn=name.split('_')
+                name,emp_id=name.split('_')
                 self.name=name
-                self.usn=usn
+                self.emp_id=emp_id
                 y1, x2, y2, x1 = faceloc
                 cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
                 cv2.putText(img, name, (x1 + 8, y2 + 8), cv2.FONT_HERSHEY_COMPLEX, 1, (255, 25, 25), 2)
@@ -490,18 +492,18 @@ class student(QMainWindow, StyleContainer):
         self.video_label.setPixmap(QPixmap.fromImage(qimg))
     
     def s_submit(self):
-        usn=self.student_usn_input.text()
+        emp_id=self.employee_emp_id_input.text()
 
         print("hello")
         if self.cap:
             self.cap.release()
 
-        if(usn.upper()!=self.usn):
-             QMessageBox.warning(self, 'INCORRECT', 'Please Check the USN correctly')
+        if(emp_id.upper()!=self.emp_id):
+             QMessageBox.warning(self, 'INCORRECT', 'Please Check the if the Employee ID is correct')
         else:
             self.stacked_widget.setCurrentWidget(self.second_widget)
             try:
-                conn=sqlite3.connect('student_details.db')
+                conn=sqlite3.connect('employee_details.db')
                 c=conn.cursor()
                 c.execute("SELECT * FROM attendance WHERE name=?",(self.name,))
                 rows=c.fetchall()
@@ -554,7 +556,7 @@ class VideoCapture(QMainWindow, StyleContainer):
         self.layout.addWidget(self.start_button)
 
         # Add a button to stop the video
-        self.stop_button = QPushButton('close', self)
+        self.stop_button = QPushButton('Close', self)
         self.stop_button.setStyleSheet(self.button_style())
         self.stop_button.clicked.connect(self.close_window)
         self.layout.addWidget(self.stop_button)
@@ -616,17 +618,17 @@ class VideoCapture(QMainWindow, StyleContainer):
 
             if matches[matchIndex]:
                 name = self.classNames[matchIndex].upper()
-                name,usn=name.split('_')
+                name,emp_id=name.split('_')
                 y1, x2, y2, x1 = faceloc
                 cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
-                cv2.putText(img, name+" "+usn, (x1 + 8, y2 + 8), cv2.FONT_HERSHEY_COMPLEX, 1, (255, 25, 25), 2)
+                cv2.putText(img, name+" "+emp_id, (x1 + 8, y2 + 8), cv2.FONT_HERSHEY_COMPLEX, 1, (255, 25, 25), 2)
                 now = datetime.now()
                 self.current_time = now.strftime("%H:%M:%S")
                 self.current_date = now.strftime("%d")
                 self.current_month = now.strftime("%m")
-                print(usn)
+                print(emp_id)
                 try:
-                    conn = sqlite3.connect('student_details.db')
+                    conn = sqlite3.connect('employee_details.db')
                     c = conn.cursor()
                     c.execute("SELECT * FROM attendance WHERE name=? AND date=?", (name, self.current_date))
                     row = c.fetchall()
@@ -637,9 +639,9 @@ class VideoCapture(QMainWindow, StyleContainer):
                         else:
                             cv2.putText(img,"ATTENDENCE COMPLETED", (x1 + 20, y2 + 100), cv2.FONT_HERSHEY_COMPLEX, 1, (255, 25, 25), 2)
                             c.execute('''
-                            INSERT INTO attendance (usn,name,date,month,login_time,logout_time)
+                            INSERT INTO attendance (emp_id,name,date,month,login_time,logout_time)
                             VALUES (?,?,?,?,?,?)
-                            ''', (usn,name, self.current_date, self.current_month,self.current_time,"0"))
+                            ''', (emp_id,name, self.current_date, self.current_month,self.current_time,"0"))
 
                     elif self.check=='logout':
                         if not row:
@@ -665,11 +667,11 @@ class VideoCapture(QMainWindow, StyleContainer):
         qimg = QImage(img.data, img.shape[1], img.shape[0], QImage.Format_RGB888)
         self.video_label.setPixmap(QPixmap.fromImage(qimg))
                 
-# student attendence table list search by admin using date,name 
+# employee attendence table list search by admin using date,name 
 class Table_list(QMainWindow, StyleContainer):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle('Student Attendance Window')
+        self.setWindowTitle('Employee Attendance Window')
         self.setGeometry(100, 100, 800, 500)
         
         # Create the main layout
@@ -680,7 +682,7 @@ class Table_list(QMainWindow, StyleContainer):
         central_widget.setLayout(self.layout)
         self.setCentralWidget(central_widget)
         
-        self.heading_label = QLabel('Student Attendance')
+        self.heading_label = QLabel('Employee Attendance')
         self.heading_label.setAlignment(Qt.AlignCenter)
         self.heading_label.setStyleSheet("font-size: 20px; font-weight: bold; margin-top: 20px; margin-bottom: 20px;")
         self.layout.addWidget(self.heading_label)
@@ -693,7 +695,7 @@ class Table_list(QMainWindow, StyleContainer):
         self.form_layout.addRow(self.username_label, self.username_input)
 
         # DATE input
-        self.date_label = QLabel('Enter date')
+        self.date_label = QLabel('Enter date:')
         self.date_input = QLineEdit(self)
         self.form_layout.addRow(self.date_label,self.date_input)
 
@@ -708,7 +710,7 @@ class Table_list(QMainWindow, StyleContainer):
         # Create a table widget
         self.table_widget = QTableWidget()
         self.table_widget.setColumnCount(6)  # Adjust column count based on your data
-        self.table_widget.setHorizontalHeaderLabels(['USN','Name', 'Date','MONTH' ,'LoginTime','LogoutTime'])  # Column headers
+        self.table_widget.setHorizontalHeaderLabels(['Employee ID','Name', 'Date','Month' ,'LoginTime','LogoutTime'])  # Column headers
         self.layout.addWidget(self.table_widget)
         self.list()
 
@@ -717,7 +719,7 @@ class Table_list(QMainWindow, StyleContainer):
         date = self.date_input.text()
         name=name.upper()
         try:
-            conn=sqlite3.connect('student_details.db')
+            conn=sqlite3.connect('employee_details.db')
             c=conn.cursor()
             if(name=='' and date==''):
                 c.execute('select * from attendance')
