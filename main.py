@@ -7,7 +7,7 @@ from datetime import datetime
 
 import sqlite3
 from PyQt5.QtCore import QTimer
-from PyQt5.QtGui import QImage, QPixmap, QFont
+from PyQt5.QtGui import QImage, QPixmap
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QApplication, QLabel, QMainWindow, QPushButton, QVBoxLayout, QWidget, QHBoxLayout, QLineEdit, QFileDialog, QMessageBox, QFormLayout, QComboBox,QTableWidget, QTableWidgetItem,QStackedWidget
 
@@ -245,7 +245,6 @@ class admin_home(QWidget, StyleContainer):
     def initUI(self):
         self.layout = QVBoxLayout()
         self.layout.setAlignment(Qt.AlignCenter)
-        self.setStyleSheet("background-color: #E1DCC8;")
         
         self.heading_label = QLabel('Admin Dashboard')
         self.heading_label.setAlignment(Qt.AlignCenter)
