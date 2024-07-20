@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 import face_recognition
 from datetime import datetime
-
+from statistics import mode
 import sqlite3
 from PyQt5.QtCore import QTimer
 from PyQt5.QtGui import QImage, QPixmap, QFont
@@ -19,7 +19,6 @@ def init_db():
         c = conn.cursor()
         c.execute('''
             CREATE TABLE IF NOT EXISTS employees(
-                id INTEGER NOT NULL,
                 name TEXT NOT NULL,
                 emp_id TEXT PRIMARY KEY,
                 designation TEXT NOT NULL,
@@ -76,14 +75,34 @@ class StyleContainer:
             }
         """
         
+    def table_style(self):
+        return """
+            QTableWidget {
+                border: 1px solid black;
+                gridline-color: black;
+            }
+            QHeaderView::section {
+                background-color: lightgray;
+                padding: 4px;
+                border: 1px solid black;
+            }
+            QTableWidget::item {
+                border: 1px solid black;
+            }
+        """
+    
+        
 ## ADMIN FILL THE FORM WITH EMPLOYEE DETAILS LIKE ID, NAME, DESIGNATION, GENDER AND PHOTO
 class FormWindow(QMainWindow, StyleContainer):
     def __init__(self):
         super().__init__()
         self.setWindowTitle('Employee Form')
         self.setGeometry(100, 100, 800, 800)
+
+        self.stackedwidget=QStackedWidget()
+        self.setCentralWidget(self.stackedwidget)
+       
         self.central_widget = QWidget()
-        self.setCentralWidget(self.central_widget)
         self.layout = QVBoxLayout(self.central_widget)
         self.central_widget.setStyleSheet("QWidget { " + self.window_style() + " }")
         
@@ -121,7 +140,8 @@ class FormWindow(QMainWindow, StyleContainer):
 
         # File input for image
         self.file_button = QPushButton('Add Image', self)
-        self.file_button.clicked.connect(self.open_file_dialog)
+        # self.file_button.clicked.connect(self.open_file_dialog)
+        self.file_button.clicked.connect(self.new_widget)
         self.file_button.setStyleSheet(self.button_style())
         self.file_label = QLabel('No file selected')
         self.form_layout.addRow(self.file_button, self.file_label)
@@ -134,6 +154,50 @@ class FormWindow(QMainWindow, StyleContainer):
         self.layout.addLayout(self.form_layout)
         self.selected_file = None
 
+        self.second_widget=QWidget()
+        self.second_layout=QVBoxLayout(self.second_widget)
+        self.video_label=QLabel(self)
+        self.capture_button=QPushButton("capture",self)
+        self.capture_button.clicked.connect(self.capture)
+        self.second_layout.addWidget(self.video_label)
+        self.second_layout.addWidget(self.capture_button)
+
+        self.stackedwidget.addWidget(self.central_widget)
+        self.stackedwidget.addWidget(self.second_widget)
+
+    
+    def new_widget(self):
+        self.stackedwidget.setCurrentWidget(self.second_widget)
+        self.cap=cv2.VideoCapture(0)
+        self.timer=QTimer(self)
+        self.timer.start(20)
+        self.timer.timeout.connect(self.update_capture)
+        
+        
+    def update_capture(self):
+        success,frame=self.cap.read()
+        if not success:
+            return 0
+        self.img=cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
+        # self.img=frame
+        distance=face_recognition.face_locations(self.img)
+        # y1,x2,y2,x1=distance
+        # cv2.rectangle(self.img,(x1,y1),(x2,y2),(1,0,0))
+        qimg=QImage(self.img.data,self.img.shape[1],self.img.shape[0],QImage.Format_RGB888)
+        self.video_label.setPixmap(QPixmap.fromImage(qimg))
+        
+
+    def capture(self):
+        ret,frame=self.cap.read()
+        if ret:
+            save_path = rf"C:\Stuff\Documents\College\Mini projects\Facial recognition\images\{self.employee_name_input.text()}_{self.emp_id_input.text()}.jpg"
+            # cv2.imwrite(save_path,frame)
+            self.cap.release()
+            
+            self.stackedwidget.setCurrentWidget(self.central_widget)
+            self.file_label.setText(os.path.basename(save_path))
+        
+        
     def open_file_dialog(self):
         options = QFileDialog.Options()
         options |= QFileDialog.ReadOnly
@@ -147,24 +211,28 @@ class FormWindow(QMainWindow, StyleContainer):
         emp_id = self.emp_id_input.text()
         designation = self.designation_input.currentText()
         gender = self.gender_input.currentText()
-        file_path = self.selected_file
+        file_path = self.file_label.text()
 
         if not employee_name or not emp_id or not designation or not gender or not file_path:
             QMessageBox.warning(self, 'Incomplete Form', 'Please fill all fields and select a file.')
         else:
             
             try:
-                with open(file_path, 'rb') as file:
-                    image_data = file.read()
-                image=cv2.imread(self.selected_file)
-                path=rf'C:\Stuff\Documents\College\Mini projects\Facial recognition\images\{employee_name}_{emp_id}.jpg'
-                cv2.imwrite(path,image)
+                # with open(file_path, 'rb') as file:
+                #     image_data = file.read()
+                # image=cv2.imread(self.selected_file)
+                
+                path=rf"C:\Stuff\Documents\College\Mini projects\Facial recognition\images\{employee_name}_{emp_id}.jpg"
+                cv2.imwrite(path,self.img)
+                # Convert the image to a byte array
+                success,buffer = cv2.imencode('.jpg', self.img)
+                image_bytes=buffer.tobytes()
                 conn = sqlite3.connect('employee_details.db')
                 c = conn.cursor()
                 c.execute('''
                     INSERT INTO employees (name, emp_id, designation, gender, image)
                     VALUES (?, ?, ?, ?, ?)
-                ''', (employee_name, emp_id, designation, gender, image_data))
+                ''', (employee_name, emp_id, designation, gender,image_bytes))
                 conn.commit()
                 QMessageBox.information(self, 'Form Submitted', 'Employee details have been submitted successfully.')
                 self.employee_name_input.clear()
@@ -184,7 +252,7 @@ class FormWindow(QMainWindow, StyleContainer):
 class admin_login(QMainWindow, StyleContainer):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle('Admin Window')
+        self.setWindowTitle('admin Window')
         self.setGeometry(100, 100, 800, 600)
 
         self.central_widget = QWidget()
@@ -306,7 +374,7 @@ class MainWindow(QMainWindow, StyleContainer):
         self.layout.addWidget(self.heading_label)
 
         # Add buttons
-        self.employee_login_button = QPushButton('Employee Login', self)
+        self.employee_login_button = QPushButton('Employee Login',self)
         self.employee_login_button.setStyleSheet(self.button_style())
         self.employee_login_button.clicked.connect(self.open_employee)
         
@@ -358,7 +426,7 @@ class MainWindow(QMainWindow, StyleContainer):
         self.admin_window.show()
        
 
-# EMPLOYEE HOME PAGE, LOGIN WITH FACE RECOGNITION AND OPEN THE ATTENDENCE LIST
+# EMPLOYEE HOME PAGE ,LOGIN WITH FACE RECOGNITION AND OPEN THE ATTENDENCE LIST
 class employee(QMainWindow, StyleContainer):
     def __init__(self):
         super().__init__()
@@ -430,7 +498,7 @@ class employee(QMainWindow, StyleContainer):
         # Initialize timer and video capture
         self.timer = QTimer()
         self.timer.timeout.connect(self.check_frame)
-        self.cap = None 
+        self.cap = None  # Assuming you'll initialize this later in your start_video method
 
         # Second widget setup (for the table display, not shown here)
         self.second_widget = QWidget()
@@ -544,6 +612,7 @@ class VideoCapture(QMainWindow, StyleContainer):
         self.path = r"C:\Stuff\Documents\College\Mini projects\Facial recognition\images"
         self.images = []
         self.classNames = []
+        self.total=[]
         self.load_images()
 
         # Set up the main window
@@ -628,8 +697,12 @@ class VideoCapture(QMainWindow, StyleContainer):
             faceDis = face_recognition.face_distance(self.encodedListImages, encodeFace)
             matchIndex = np.argmin(faceDis)
 
+
             if matches[matchIndex]:
                 name = self.classNames[matchIndex].upper()
+                
+                print(name)
+                self.total.clear()
                 name,emp_id=name.split('_')
                 y1, x2, y2, x1 = faceloc
                 cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
@@ -642,27 +715,32 @@ class VideoCapture(QMainWindow, StyleContainer):
                 try:
                     conn = sqlite3.connect('employee_details.db')
                     c = conn.cursor()
-                    c.execute("SELECT * FROM attendance WHERE name=? AND date=?", (name, self.current_date))
+                    c.execute("SELECT login_time,logout_time FROM attendance WHERE name=? AND date=?", (name, self.current_date))
                     row = c.fetchall()
+                    length=len(row)
                     if self.check=='login':
-                        if row:
-                            print("already presented")
-                            cv2.putText(img,"ALREADY PRESENTED", (x1 + 20, y2 + 100), cv2.FONT_HERSHEY_COMPLEX, 1, (255, 25, 25), 2)
-                        else:
-                            cv2.putText(img,"ATTENDENCE COMPLETED", (x1 + 20, y2 + 100), cv2.FONT_HERSHEY_COMPLEX, 1, (255, 25, 25), 2)
-                            c.execute('''
-                            INSERT INTO attendance (emp_id,name,date,month,login_time,logout_time)
-                            VALUES (?,?,?,?,?,?)
-                            ''', (emp_id,name, self.current_date, self.current_month,self.current_time,"0"))
+                            
+                            if length!=0 and row[length-1][1]=="0":
+                                print("already presented")
+                                cv2.putText(img,"ALREADY PRESENTED", (x1 + 20, y2 + 100), cv2.FONT_HERSHEY_COMPLEX, 1, (255, 25, 25), 2)
+                            elif length==0 or (length>0 and row[length-1][1]!="0"):
+                                cv2.putText(img,"ATTENDENCE COMPLETED", (x1 + 20, y2 + 100), cv2.FONT_HERSHEY_COMPLEX, 1, (255, 25, 25), 2)
+                                c.execute('''
+                                INSERT INTO attendance (emp_id,name,date,month,login_time,logout_time)
+                                VALUES (?,?,?,?,?,?)
+                                    ''', (emp_id,name, self.current_date, self.current_month,self.current_time,"0"))
+    
+
 
                     elif self.check=='logout':
-                        if not row:
-                            QMessageBox.warning(self, 'INCORRECT', 'Please go to login button')
+                        if length==0:
+                            # QMessageBox.warning(self, 'INCORRECT', 'Please go to login button')
+                            cv2.putText(img,"LOGIN NOT COMPLETED", (x1 + 20, y2 + 100), cv2.FONT_HERSHEY_COMPLEX, 1, (255, 25, 25), 2)
 
-                        elif row and row[0][5]=="0":
-                            c.execute('''UPDATE attendance set logout_time=? where name=? AND date=?''',(self.current_time,name,self.current_date))
+                        elif length>0 and row[length-1][1]=="0":
+                            c.execute('''UPDATE attendance set logout_time=? where name=? AND date=? AND logout_time=?''',(self.current_time,name,self.current_date,"0"))
                             cv2.putText(img,"LOGOUT ATTENDENCE COMPLETED", (x1 + 20, y2 + 100), cv2.FONT_HERSHEY_COMPLEX, 1, (255, 25, 25), 2)
-                        elif row and row[0][5]!="0":
+                        elif length>0 and row[length-1][1]!="0":
                             cv2.putText(img,"LOGOUT ATTENDENCE ALREADY COMPLETED", (x1 + 20, y2 + 100), cv2.FONT_HERSHEY_COMPLEX, 1, (255, 25, 25), 2)
 
                     conn.commit()
@@ -748,11 +826,41 @@ class Table_list(QMainWindow, StyleContainer):
                 c.execute('select * from attendance where name=? and date=?',(name,date))
                 rows=c.fetchall()
             if(len(rows)>0):
-                self.table_widget.setColumnCount(len(rows[0]))
-                self.table_widget.setRowCount(len(rows))
-                for r,r_data in enumerate(rows):
-                    for c,c_data in enumerate(r_data):
-                        self.table_widget.setItem(r,c,QTableWidgetItem(str(c_data)))
+
+                    user_times = {}
+                    for entry in rows:
+                        key = (entry[0], entry[1], entry[2],entry[3])
+                        if key not in user_times:
+                            user_times[key] = []
+                        user_times[key].append((entry[4], entry[5]))
+                    # Set the column count
+                    self.table_widget.setColumnCount(6)
+                    self.table_widget.setHorizontalHeaderLabels(['Employee ID', 'Name','Date','Month', 'Login Time', 'Logout Time'])
+
+                    # Set the row count
+                    self.table_widget.setRowCount(sum(len(times) for times in user_times.values()))
+
+                    # Populate the table with data and set row spans
+                    row = 0
+                    for (emp_id,name,date,month), times in user_times.items():
+                        for i, (login, logout) in enumerate(times):
+                            if i == 0:
+                                self.table_widget.setItem(row, 0, QTableWidgetItem(emp_id))
+                                self.table_widget.setItem(row, 1, QTableWidgetItem(name))
+                                self.table_widget.setItem(row, 2, QTableWidgetItem(date))
+                                self.table_widget.setItem(row, 3, QTableWidgetItem(month))
+                                self.table_widget.setSpan(row, 0, len(times), 1)
+                                self.table_widget.setSpan(row, 1, len(times), 1)
+                                self.table_widget.setSpan(row, 2, len(times), 1)
+                                self.table_widget.setSpan(row, 3, len(times), 1)
+                            self.table_widget.setItem(row, 4, QTableWidgetItem(login))
+                            self.table_widget.setItem(row, 5, QTableWidgetItem(logout))
+                            row += 1
+                # self.table_widget.setColumnCount(len(rows[0]))
+                # self.table_widget.setRowCount(len(rows))
+                # for r,r_data in enumerate(rows):
+                #     for c,c_data in enumerate(r_data):
+                #         self.table_widget.setItem(r,c,QTableWidgetItem(str(c_data)))
             elif(len(rows)==0):
                 QMessageBox.warning(self, 'TRY AGAIN', 'Please Check the name and date correctly')
 
@@ -760,6 +868,7 @@ class Table_list(QMainWindow, StyleContainer):
             print(f"Database error :{e}")
         finally:
             conn.close()
+        self.table_widget.setStyleSheet("QWidget { " + self.table_style() + " }")
        
 if __name__ == '__main__':
     init_db()
